@@ -1,0 +1,21 @@
+{
+  "name": "control-panel",
+  "version": "1.0.0",
+  "description": "engine control panel",
+  "keywords": [
+    "engine",
+    "control",
+    "modbus"
+  ],
+  "license": "ISC",
+  "author": "NightCandle",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "serialport": "^13.0.0",
+    "ws": "^8.21.0"
+  }
+}
