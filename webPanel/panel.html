@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>伺服电机控制面板</title>
+</head>
+<body>
+    <h2>伺服电机控制面板</h2>
+
+    <div>
+        <h3>连接</h3>
+        <input type="text" id="wsUrl" value="ws://localhost:2345" size="30">
+        <button id="connectBtn">连接</button>
+        <button id="disconnectBtn" disabled>断开</button>
+        <span id="connStatus">未连接</span>
+    </div>
+    <hr>
+
+    <div>
+        <h3>从机ID</h3>
+        <input type="text" id="slaveId" value="0x01" size="10">
+    </div>
+    <hr>
+
+    <div>
+        <h3>1. 校准 (Cal)</h3>
+        <button id="calBtn">校准电机</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>2. 移动 (Mv)</h3>
+        <p>3200 脉冲 = 1圈 = 4mm</p>
+        <label>脉冲数量: <input type="number" id="mvPulse" value="3200"></label>
+        <button id="mvBtn">移动</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>3. 移动参数设置 (MvSetting)</h3>
+        <label>加速度 (0~255): <input type="number" id="mvAccel" value="100" min="0" max="255"></label><br>
+        <label>速度 (0~5000 rpm): <input type="number" id="mvSpeed" value="1200" min="0" max="5000"></label><br>
+        <button id="mvSettingBtn">设置</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>4. 停止 (Stop)</h3>
+        <button id="stopBtn">停止</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>5. 归零 (Zero)</h3>
+        <button id="zeroBtn">归零</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>6. 归零参数设置 (ZeroSetting)</h3>
+        <label>归零速度 (0~5000 rpm): <input type="number" id="zsSpeed" value="300" min="0" max="5000"></label><br>
+        <label>回零超时时间 (ms): <input type="number" id="zsTimeout" value="10000" min="0" max="999999"></label><br>
+        <label>碰撞检测转速 (0~5000 rpm): <input type="number" id="zsCollSpeed" value="300" min="0" max="5000"></label><br>
+        <label>碰撞检测电流 (0~6000 mA): <input type="number" id="zsCollCurrent" value="800" min="0" max="6000"></label><br>
+        <label>碰撞检测时间 (0~65535 ms): <input type="number" id="zsCollTime" value="60" min="0" max="65535"></label><br>
+        <button id="zeroSettingBtn">设置</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>7. 查询回零状态 (ZeroStatus)</h3>
+        <button id="zeroStatusBtn">查询</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>日志</h3>
+        <textarea id="log" rows="20" cols="80" readonly></textarea>
+    </div>
+
+    <script>
+        let ws = null;
+
+        const $ = id => document.getElementById(id);
+        const log = (msg) => {
+            const ta = $('log');
+            ta.value += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+            ta.scrollTop = ta.scrollHeight;
+        };
+
+        function sendCmd(cmd, data) {
+            const id = $('slaveId').value.trim();
+            if (!id) { log('请填写从机ID'); return; }
+            if (!ws || ws.readyState !== WebSocket.OPEN) { log('未连接到服务器'); return; }
+            const msg = JSON.stringify({ cmd, id, data });
+            log('→ 发送: ' + msg);
+            ws.send(msg);
+        }
+
+        // ---- 连接 ----
+        $('connectBtn').onclick = () => {
+            const url = $('wsUrl').value.trim();
+            ws = new WebSocket(url);
+            ws.onopen = () => {
+                $('connStatus').textContent = '已连接';
+                $('connectBtn').disabled = true;
+                $('disconnectBtn').disabled = false;
+                log('已连接到 ' + url);
+            };
+            ws.onclose = () => {
+                $('connStatus').textContent = '已断开';
+                $('connectBtn').disabled = false;
+                $('disconnectBtn').disabled = true;
+                log('连接已关闭');
+                ws = null;
+            };
+            ws.onerror = (e) => {
+                log('连接错误');
+            };
+            ws.onmessage = (e) => {
+                log('← 接收: ' + e.data);
+                try {
+                    const resp = JSON.parse(e.data);
+                    // 如果查询的是 ZeroStatus，解析回零状态
+                    if (resp.data && typeof resp.data === 'string') {
+                        // 0103020003f845 → 看第 9-10 字符 (索引 8-9)
+                        const hex = resp.data.replace(/\s/g, '');
+                        if (hex.length >= 10) {
+                            const statusByte = hex.substring(8, 10);
+                            if (statusByte === '03') {
+                                log('→ 解析: 回零完成 (状态码: 0x' + statusByte + ')');
+                            } else if (statusByte === '00') {
+                                log('→ 解析: 回零未完成 (状态码: 0x' + statusByte + ')');
+                            } else {
+                                log('→ 解析: 回零状态码 0x' + statusByte);
+                            }
+                        }
+                    }
+                    if (resp.status === 'busy') {
+                        log('→ 系统繁忙');
+                    }
+                } catch (e) {
+                    // 非 JSON 忽略
+                }
+            };
+        };
+
+        $('disconnectBtn').onclick = () => {
+            if (ws) { ws.close(); }
+        };
+
+        // ---- 1. Cal ----
+        $('calBtn').onclick = () => sendCmd('Cal', []);
+
+        // ---- 2. Mv ----
+        $('mvBtn').onclick = () => {
+            const pulse = parseInt($('mvPulse').value);
+            if (isNaN(pulse)) { log('请输入有效脉冲数'); return; }
+            sendCmd('Mv', [pulse]);
+        };
+
+        // ---- 3. MvSetting ----
+        $('mvSettingBtn').onclick = () => {
+            const accel = parseInt($('mvAccel').value);
+            const speed = parseInt($('mvSpeed').value);
+            if (isNaN(accel) || isNaN(speed)) { log('请输入有效参数'); return; }
+            sendCmd('MvSetting', [accel, speed]);
+        };
+
+        // ---- 4. Stop ----
+        $('stopBtn').onclick = () => sendCmd('Stop', []);
+
+        // ---- 5. Zero ----
+        $('zeroBtn').onclick = () => sendCmd('Zero', []);
+
+        // ---- 6. ZeroSetting ----
+        $('zeroSettingBtn').onclick = () => {
+            const params = [
+                parseInt($('zsSpeed').value),
+                parseInt($('zsTimeout').value),
+                parseInt($('zsCollSpeed').value),
+                parseInt($('zsCollCurrent').value),
+                parseInt($('zsCollTime').value)
+            ];
+            if (params.some(isNaN)) { log('请输入有效参数'); return; }
+            sendCmd('ZeroSetting', params);
+        };
+
+        // ---- 7. ZeroStatus ----
+        $('zeroStatusBtn').onclick = () => sendCmd('ZeroStatus', []);
+    </script>
+</body>
+</html>
