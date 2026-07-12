@@ -55,8 +55,11 @@ function MvSetting(slaveAddr, acceleration = 100, speed = 1200) {
     valueBuf.writeUInt16BE(acceleration, 0);
     // value2: 速度 (2字节, 大端序)
     valueBuf.writeUInt16BE(speed, 2);
-    // value3: 固定为 00 00 (2字节)
-    valueBuf.writeUInt16BE(0, 4);
+    /* // value3: 固定为 00 00 (2字节)
+    valueBuf.writeUInt16BE(1, 4); */
+    // value3: 固定为 01 00 (2字节)
+    valueBuf.writeUInt8(0x01, 4);  // 写入第一个字节 01
+    valueBuf.writeUInt8(0x00, 5);  // 写入第二个字节 00
 
     // 合并头部和数值部分
     const data = Buffer.concat([header, valueBuf]);
