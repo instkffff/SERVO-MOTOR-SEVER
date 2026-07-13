@@ -60,7 +60,7 @@ function GX28(cmd, params) {
             return Zero(params[0]);
             break;
         case 'ZeroSetting':
-            return ZeroSetting(params[0], params[1], params[2], params[3], params[4]);
+            return ZeroSetting(params[0], params[1], params[2], params[3], params[4], params[5]);
             break;
         case 'ZeroStatus':
             return ZeroStatus(params[0]);
@@ -76,7 +76,7 @@ const paramsNum = {
     MvSetting: 3,
     Stop: 1,
     Zero: 1,
-    ZeroSetting: 5,
+    ZeroSetting: 6,
     ZeroStatus: 1,
 };
 
