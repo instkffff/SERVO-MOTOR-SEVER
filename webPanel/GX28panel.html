@@ -86,7 +86,6 @@
 
     <script>
         let ws = null;
-        let pendingCmd = null;
 
         const $ = id => document.getElementById(id);
         const log = (msg) => {
@@ -101,38 +100,8 @@
             if (!ws || ws.readyState !== WebSocket.OPEN) { log('未连接到服务器'); return; }
             const msg = JSON.stringify({ cmd, id, data });
             log('→ ' + msg);
-            pendingCmd = cmd;
             ws.send(msg);
         }
-
-        function getHexString(data) {
-            if (Array.isArray(data) && data.length > 0) return data[0];
-            if (typeof data === 'string') return data;
-            return null;
-        }
-
-        function parseStatusByte(hexStr) {
-            if (!hexStr) return null;
-            let clean = hexStr.replace(/^0x/, '').replace(/\s/g, '');
-            if (clean.length < 10) return null;
-            return parseInt(clean.substring(8, 10), 16);
-        }
-
-        const zeroStatusMap = {
-            0x00: '未完成',
-            0x03: '已完成'
-        };
-
-        const eStatusMap = {
-            0x00: '未使能',
-            0x01: '已使能',
-            0x02: '位置到达',
-            0x03: '使能+位置到达',
-            0x40: '掉电',
-            0x41: '掉电+使能',
-            0x42: '掉电+位置到达',
-            0x43: '掉电+使能+位置到达'
-        };
 
         // ---- 连接 ----
         $('connectBtn').onclick = () => {
@@ -150,12 +119,10 @@
                 $('disconnectBtn').disabled = true;
                 log('连接已关闭');
                 ws = null;
-                pendingCmd = null;
             };
             ws.onerror = () => { log('连接错误'); };
             ws.onmessage = (e) => {
                 log('← ' + e.data);
-                pendingCmd = null;
             };
         };
 

@@ -83,7 +83,6 @@
 
     <script>
         let ws = null;
-        let pendingCmd = null;
 
         const $ = id => document.getElementById(id);
         const log = (msg) => {
@@ -98,7 +97,6 @@
             if (!ws || ws.readyState !== WebSocket.OPEN) { log('未连接到服务器'); return; }
             const msg = JSON.stringify({ cmd, id, data });
             log('→ ' + msg);
-            pendingCmd = cmd;
             ws.send(msg);
         }
 
@@ -118,12 +116,10 @@
                 $('disconnectBtn').disabled = true;
                 log('连接已关闭');
                 ws = null;
-                pendingCmd = null;
             };
             ws.onerror = () => { log('连接错误'); };
             ws.onmessage = (e) => {
                 log('← ' + e.data);
-                pendingCmd = null;
             };
         };
 
