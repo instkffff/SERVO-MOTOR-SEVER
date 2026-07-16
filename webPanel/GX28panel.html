@@ -70,12 +70,14 @@
     <div>
         <h3>7. 查询回零状态 (ZeroStatus)</h3>
         <button id="zeroStatusBtn">查询</button>
+        <span id="zeroStatusResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
     </div>
     <hr>
 
     <div>
         <h3>8. 查询电机状态 (EStatus)</h3>
         <button id="eStatusBtn">查询</button>
+        <span id="eStatusResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
     </div>
     <hr>
 
@@ -86,6 +88,7 @@
 
     <script>
         let ws = null;
+        let pendingCmd = null;
 
         const $ = id => document.getElementById(id);
         const log = (msg) => {
@@ -99,9 +102,39 @@
             if (!id) { log('请填写从机ID'); return; }
             if (!ws || ws.readyState !== WebSocket.OPEN) { log('未连接到服务器'); return; }
             const msg = JSON.stringify({ cmd, id, data });
-            log('→ 发送: ' + msg);
+            log('→ ' + msg);
+            pendingCmd = cmd;
             ws.send(msg);
         }
+
+        function getHexString(data) {
+            if (Array.isArray(data) && data.length > 0) return data[0];
+            if (typeof data === 'string') return data;
+            return null;
+        }
+
+        function parseStatusByte(hexStr) {
+            if (!hexStr) return null;
+            let clean = hexStr.replace(/^0x/, '').replace(/\s/g, '');
+            if (clean.length < 10) return null;
+            return parseInt(clean.substring(8, 10), 16);
+        }
+
+        const zeroStatusMap = {
+            0x00: '未完成',
+            0x03: '已完成'
+        };
+
+        const eStatusMap = {
+            0x00: '未使能',
+            0x01: '已使能',
+            0x02: '位置到达',
+            0x03: '使能+位置到达',
+            0x40: '掉电',
+            0x41: '掉电+使能',
+            0x42: '掉电+位置到达',
+            0x43: '掉电+使能+位置到达'
+        };
 
         // ---- 连接 ----
         $('connectBtn').onclick = () => {
@@ -119,44 +152,46 @@
                 $('disconnectBtn').disabled = true;
                 log('连接已关闭');
                 ws = null;
+                pendingCmd = null;
             };
-            ws.onerror = (e) => {
-                log('连接错误');
-            };
+            ws.onerror = () => { log('连接错误'); };
             ws.onmessage = (e) => {
-                log('← 接收: ' + e.data);
+                log('← ' + e.data);
                 try {
                     const resp = JSON.parse(e.data);
-                    // 如果查询的是 ZeroStatus，解析回零状态
-                    if (resp.data && typeof resp.data === 'string' && resp.cmd === 'ZeroStatus') {
-                        const hex = resp.data.replace(/\s/g, '');
-                        if (hex.length >= 10) {
-                            const statusByte = parseInt(hex.substring(8, 10), 16);
-                            if (statusByte === 0x03) {
-                                log('→ 解析: 回零完成 (状态码: 0x' + statusByte + ')');
-                            } else if (statusByte === 0x00) {
-                                log('→ 解析: 回零未完成 (状态码: 0x' + statusByte + ')');
-                            } else {
-                                log('→ 解析: 回零状态码 0x' + statusByte);
+                    if (resp.status === 'busy') {
+                        log('系统繁忙');
+                        return;
+                    }
+
+                    const hexStr = getHexString(resp.data);
+                    if (!hexStr) return;
+
+                    const cmd = pendingCmd ? pendingCmd.toLowerCase() : '';
+
+                    // 不需要解析数据的命令
+                    if (['cal', 'mv', 'mvsetting', 'stop', 'zero', 'zerosetting'].includes(cmd)) {
+                        pendingCmd = null;
+                        return;
+                    }
+
+                    if (resp.status === 'success' && hexStr) {
+                        const val = parseStatusByte(hexStr);
+                        if (val !== null) {
+                            if (cmd === 'zerostatus') {
+                                const desc = zeroStatusMap[val] || ('未知(0x' + val.toString(16) + ')');
+                                $('zeroStatusResult').textContent = desc;
+                                $('zeroStatusResult').style.color = '#0066cc';
+                            } else if (cmd === 'estatus') {
+                                const desc = eStatusMap[val] || ('未知(0x' + val.toString(16) + ')');
+                                $('eStatusResult').textContent = desc;
+                                $('eStatusResult').style.color = '#0066cc';
                             }
                         }
-                    }
-                    // 如果查询的是 EStatus，解析电机状态
-                    if (resp.data && typeof resp.data === 'string' && resp.cmd === 'EStatus') {
-                        const hex = resp.data.replace(/\s/g, '');
-                        if (hex.length >= 10) {
-                            const statusByte = parseInt(hex.substring(8, 10), 16);
-                            const enable = (statusByte >> 0) & 1;   // 位0: 使能状态
-                            const posReached = (statusByte >> 1) & 1; // 位1: 位置达到标志
-                            const powerDown = (statusByte >> 6) & 1;  // 位6: 掉电标志
-                            log(`→ 解析: 使能=${enable}, 位置到达=${posReached}, 掉电标志=${powerDown} (0x${hex.substring(8, 10).toUpperCase()})`);
-                        }
-                    }
-                    if (resp.status === 'busy') {
-                        log('→ 系统繁忙');
+                        pendingCmd = null;
                     }
                 } catch (e) {
-                    // 非 JSON 忽略
+                    // 忽略解析错误
                 }
             };
         };
@@ -203,10 +238,18 @@
         };
 
         // ---- 7. ZeroStatus ----
-        $('zeroStatusBtn').onclick = () => sendCmd('ZeroStatus', []);
+        $('zeroStatusBtn').onclick = () => {
+            $('zeroStatusResult').textContent = '查询中...';
+            $('zeroStatusResult').style.color = '#ff9900';
+            sendCmd('ZeroStatus', []);
+        };
 
         // ---- 8. EStatus ----
-        $('eStatusBtn').onclick = () => sendCmd('EStatus', []);
+        $('eStatusBtn').onclick = () => {
+            $('eStatusResult').textContent = '查询中...';
+            $('eStatusResult').style.color = '#ff9900';
+            sendCmd('EStatus', []);
+        };
     </script>
 </body>
 </html>
