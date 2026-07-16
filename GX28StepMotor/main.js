@@ -5,6 +5,7 @@ import { Stop } from './Stop.js'
 import { Zero } from './Zero.js'
 import { ZeroSetting } from './ZeroSetting.js'
 import { ZeroStatus } from './ZeroStatus.js'
+import { EStatus } from './EStatus.js'
 
 
 /**
