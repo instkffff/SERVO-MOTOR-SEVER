@@ -70,14 +70,12 @@
     <div>
         <h3>7. 查询回零状态 (ZeroStatus)</h3>
         <button id="zeroStatusBtn">查询</button>
-        <span id="zeroStatusResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
     </div>
     <hr>
 
     <div>
         <h3>8. 查询电机状态 (EStatus)</h3>
         <button id="eStatusBtn">查询</button>
-        <span id="eStatusResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
     </div>
     <hr>
 
@@ -157,42 +155,7 @@
             ws.onerror = () => { log('连接错误'); };
             ws.onmessage = (e) => {
                 log('← ' + e.data);
-                try {
-                    const resp = JSON.parse(e.data);
-                    if (resp.status === 'busy') {
-                        log('系统繁忙');
-                        return;
-                    }
-
-                    const hexStr = getHexString(resp.data);
-                    if (!hexStr) return;
-
-                    const cmd = pendingCmd ? pendingCmd.toLowerCase() : '';
-
-                    // 不需要解析数据的命令
-                    if (['cal', 'mv', 'mvsetting', 'stop', 'zero', 'zerosetting'].includes(cmd)) {
-                        pendingCmd = null;
-                        return;
-                    }
-
-                    if (resp.status === 'success' && hexStr) {
-                        const val = parseStatusByte(hexStr);
-                        if (val !== null) {
-                            if (cmd === 'zerostatus') {
-                                const desc = zeroStatusMap[val] || ('未知(0x' + val.toString(16) + ')');
-                                $('zeroStatusResult').textContent = desc;
-                                $('zeroStatusResult').style.color = '#0066cc';
-                            } else if (cmd === 'estatus') {
-                                const desc = eStatusMap[val] || ('未知(0x' + val.toString(16) + ')');
-                                $('eStatusResult').textContent = desc;
-                                $('eStatusResult').style.color = '#0066cc';
-                            }
-                        }
-                        pendingCmd = null;
-                    }
-                } catch (e) {
-                    // 忽略解析错误
-                }
+                pendingCmd = null;
             };
         };
 
@@ -239,15 +202,11 @@
 
         // ---- 7. ZeroStatus ----
         $('zeroStatusBtn').onclick = () => {
-            $('zeroStatusResult').textContent = '查询中...';
-            $('zeroStatusResult').style.color = '#ff9900';
             sendCmd('ZeroStatus', []);
         };
 
         // ---- 8. EStatus ----
         $('eStatusBtn').onclick = () => {
-            $('eStatusResult').textContent = '查询中...';
-            $('eStatusResult').style.color = '#ff9900';
             sendCmd('EStatus', []);
         };
     </script>
