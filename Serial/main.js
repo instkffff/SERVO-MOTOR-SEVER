@@ -33,6 +33,15 @@ convert
 }
 */
 
+// ==== 全局超时配置 ====
+let RECEIVE_TIMEOUT_MS = 3000          // 默认 3 秒，可外部修改
+let receiveTimer = null                // 定时器句柄
+
+const timeoutResponse = {
+    "status": "timeout",
+    "data": [],
+}
+
 const cmdGX28 = ['Cal', 'EStatus', 'Mv', 'MvSetting', 'Stop', 'Zero', 'ZeroSetting', 'ZeroStatus']
 const cmdZSDCM = ['SetAccPulsHz', 'SetStopHz', 'SetPuls', 'SetPulsHz', 'ZeroSwitch', 'SpinStatus', 'Spin']
 
@@ -98,11 +107,26 @@ async function initSerialApp(options = {}) {
             console.log('send buffer is null')
             return
         }
+
         await sendData(buffer)
+
+        // ===== 启动接收超时定时器 =====
+        if (receiveTimer) clearTimeout(receiveTimer)
+        receiveTimer = setTimeout(() => {
+            console.log(`接收超时 (${RECEIVE_TIMEOUT_MS}ms): ${CMD}`)
+            emitResponse(timeoutResponse)
+            receiveTimer = null
+        }, RECEIVE_TIMEOUT_MS)
     });
 
     // 绑定接收数据回调
     onReceiveData((data) => {
+        // 收到数据 → 清除超时定时器
+        if (receiveTimer) {
+            clearTimeout(receiveTimer)
+            receiveTimer = null
+        }
+
         console.log('接收数据:', data)
         let buffer = checkCRC(data)
         if (buffer === null) {
@@ -136,6 +160,8 @@ async function initSerialApp(options = {}) {
         send: (data) => sendData(data),
         /** 列出可用串口 */
         listPorts: () => listPorts(),
+        /** 设置接收超时时间（毫秒） */
+        setTimeout: (ms) => { RECEIVE_TIMEOUT_MS = ms },
     }
 }
 
