@@ -1,6 +1,7 @@
 import { checkCRC } from '../tool/checkCRC.js';
 import { VFBack } from '../tool/VFBack.js';
 import { GX28 } from '../GX28StepMotor/main.js';
+import { ZSDCM } from '../ZSDCM/main.js';
 import { createWebSocketAPI, emitResponse, getBusyState, bus } from '../websocket/API.js';
 import { dataBack } from '../tool/dataBack.js';
 
@@ -31,6 +32,9 @@ convert
   "params": [id,a,b,c]
 }
 */
+
+const cmdGX28 = ['Cal', 'EStatus', 'Mv', 'MvSetting', 'Stop', 'Zero', 'ZeroSetting', 'ZeroStatus']
+const cmdZSDCM = ['SetAccPulsHz', 'SetStopHz', 'SetPuls', 'SetPulsHz', 'ZeroSwitch', 'SpinStatus', 'Spin']
 
 let CMD = ''
 
@@ -71,10 +75,24 @@ async function initSerialApp(options = {}) {
     // 打开串口
     await openSerialPort(comPath, { baudRate })
 
-    // 绑定 send 事件
+    // 绑定 send 事件 - 指令分流
     bus.on('send', async (data) => {
         let convertedData = convertData(data)
-        let buffer = GX28(convertedData.cmd, convertedData.params)
+        let buffer = null
+
+        // ===== 指令分流 =====
+        if (cmdGX28.includes(convertedData.cmd)) {
+            // GX28 步进电机指令
+            buffer = GX28(convertedData.cmd, convertedData.params)
+        } else if (cmdZSDCM.includes(convertedData.cmd)) {
+            // ZSDCM 直流电机指令
+            buffer = ZSDCM(convertedData.cmd, convertedData.params)
+        } else {
+            console.log(`未知指令: ${convertedData.cmd}`)
+            emitResponse(resError)
+            return
+        }
+
         if (buffer === null) {
             emitResponse(resError)
             console.log('send buffer is null')
