@@ -26,7 +26,7 @@ const MvFrame = Mv(0x01, 1000)
 compareData(MvFrame, '011000fc000204000003e8fc00')
 
 const MvSettingFrame = MvSetting(0x01, 200, 1200); 
-compareData(MvSettingFrame, '011000f100030600c804b000005381')
+compareData(MvSettingFrame, '011000f100030600c804b001005211')
 
 const StopFrame = Stop(0x01); 
 compareData(StopFrame, '010600fe980083fa')
@@ -44,10 +44,10 @@ const CalBack = Buffer.from([0x01, 0x06, 0x00, 0x06, 0x00, 0x01, 0xA8, 0x0B])
 console.log(VFBack(CalBack, dataBack.Cal))
 
 const MvBack = Buffer.from([0x01, 0x10, 0x00, 0xFC, 0x00, 0x02, 0x81, 0xF8])
-console.log(VFBack(MvBack, dataBack.MV))
+console.log(VFBack(MvBack, dataBack.Mv))
 
-const MVSettingBack = Buffer.from([0x01, 0x10, 0x00, 0xF1, 0x00, 0x03, 0xD1, 0xFB])
-console.log(VFBack(MVSettingBack, dataBack.MVSetting))
+const MvSettingBack = Buffer.from([0x01, 0x10, 0x00, 0xF1, 0x00, 0x03, 0xD1, 0xFB])
+console.log(VFBack(MvSettingBack, dataBack.MvSetting))
 
 const StopBack = Buffer.from([0x01, 0x06, 0x00, 0xFE, 0x98, 0x00, 0x83, 0xFA])
 console.log(VFBack(StopBack, dataBack.Stop))
@@ -61,3 +61,5 @@ console.log(VFBack(ZeroSettingBack, dataBack.ZeroSetting))
 const ZeroStatusBack = Buffer.from([0x01, 0x03, 0x02, 0x00, 0x03, 0xF8, 0x45])
 console.log(VFBack(ZeroStatusBack, dataBack.ZeroStatus))
 
+const EStatusBack = Buffer.from([0x01, 0x03, 0x02, 0x00, 0x83, 0xF9, 0xE5])
+console.log(VFBack(EStatusBack, dataBack.EStatus))

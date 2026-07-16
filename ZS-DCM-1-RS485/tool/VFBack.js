@@ -25,15 +25,11 @@ function VFBack(buffer, ComBack) {
         return false
     }
 
-    const result = bufferCut(buffer);
-
-    // 如果 ComBack 是数组，检查结果是否在数组中
-    if (Array.isArray(ComBack)) {
-        return ComBack.includes(result);
+    if (bufferCut(buffer) === ComBack) {
+        return true
+    } else {
+        return false
     }
-
-    // 如果 ComBack 是字符串，执行原有的相等判断
-    return result === ComBack;
 }
 
 /* const CalBack = Buffer.from([0x01, 0x06, 0x00, 0x06, 0x00, 0x01, 0xA8, 0x0B])

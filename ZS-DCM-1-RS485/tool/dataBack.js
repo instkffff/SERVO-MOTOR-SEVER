@@ -6,7 +6,6 @@ const dataBack = {
     Zero: '009a0200',
     ZeroSetting: '004c0009',
     ZeroStatus: '020003',
-    EStatus: ['020082', '020083', '020002', '020003'],
 }
 
 export { dataBack }

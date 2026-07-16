@@ -65,6 +65,9 @@ function GX28(cmd, params) {
         case 'ZeroStatus':
             return ZeroStatus(params[0]);
             break;
+        case 'EStatus':
+            return EStatus(params[0]);
+            break;
         default:
             console.error(`Unknown command: ${cmd}`);
     }
@@ -78,6 +81,7 @@ const paramsNum = {
     Zero: 1,
     ZeroSetting: 6,
     ZeroStatus: 1,
+    EStatus: 1,
 };
 
 /* console.log( GX28('Cal', [0x01]) )

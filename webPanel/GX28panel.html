@@ -74,6 +74,12 @@
     <hr>
 
     <div>
+        <h3>8. 查询电机状态 (EStatus)</h3>
+        <button id="eStatusBtn">查询</button>
+    </div>
+    <hr>
+
+    <div>
         <h3>日志</h3>
         <textarea id="log" rows="20" cols="80" readonly></textarea>
     </div>
@@ -122,18 +128,28 @@
                 try {
                     const resp = JSON.parse(e.data);
                     // 如果查询的是 ZeroStatus，解析回零状态
-                    if (resp.data && typeof resp.data === 'string') {
-                        // 0103020003f845 → 看第 9-10 字符 (索引 8-9)
+                    if (resp.data && typeof resp.data === 'string' && resp.cmd === 'ZeroStatus') {
                         const hex = resp.data.replace(/\s/g, '');
                         if (hex.length >= 10) {
-                            const statusByte = hex.substring(8, 10);
-                            if (statusByte === '03') {
+                            const statusByte = parseInt(hex.substring(8, 10), 16);
+                            if (statusByte === 0x03) {
                                 log('→ 解析: 回零完成 (状态码: 0x' + statusByte + ')');
-                            } else if (statusByte === '00') {
+                            } else if (statusByte === 0x00) {
                                 log('→ 解析: 回零未完成 (状态码: 0x' + statusByte + ')');
                             } else {
                                 log('→ 解析: 回零状态码 0x' + statusByte);
                             }
+                        }
+                    }
+                    // 如果查询的是 EStatus，解析电机状态
+                    if (resp.data && typeof resp.data === 'string' && resp.cmd === 'EStatus') {
+                        const hex = resp.data.replace(/\s/g, '');
+                        if (hex.length >= 10) {
+                            const statusByte = parseInt(hex.substring(8, 10), 16);
+                            const enable = (statusByte >> 0) & 1;   // 位0: 使能状态
+                            const posReached = (statusByte >> 1) & 1; // 位1: 位置达到标志
+                            const powerDown = (statusByte >> 6) & 1;  // 位6: 掉电标志
+                            log(`→ 解析: 使能=${enable}, 位置到达=${posReached}, 掉电标志=${powerDown} (0x${hex.substring(8, 10).toUpperCase()})`);
                         }
                     }
                     if (resp.status === 'busy') {
@@ -188,6 +204,9 @@
 
         // ---- 7. ZeroStatus ----
         $('zeroStatusBtn').onclick = () => sendCmd('ZeroStatus', []);
+
+        // ---- 8. EStatus ----
+        $('eStatusBtn').onclick = () => sendCmd('EStatus', []);
     </script>
 </body>
 </html>
