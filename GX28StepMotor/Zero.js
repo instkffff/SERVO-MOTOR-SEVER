@@ -26,7 +26,7 @@ return bufferString
 
 */
 
-import { calculateCRC } from './tool/CRC.js';
+import { calculateCRC } from '../tool/CRC.js';
 
 /**
  * 生成归零指令数据包

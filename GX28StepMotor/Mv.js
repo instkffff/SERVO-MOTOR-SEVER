@@ -25,7 +25,7 @@ CRC16-Modbus
 
 */
 
-import { calculateCRC } from './tool/CRC.js';
+import { calculateCRC } from '../tool/CRC.js';
 
 /**
  * 生成移动指令数据包

@@ -26,7 +26,7 @@ return bufferString
 
 */
 
-import { calculateCRC } from './tool/CRC.js';
+import { calculateCRC } from '../tool/CRC.js';
 
 /**
  * 生成停止指令数据包

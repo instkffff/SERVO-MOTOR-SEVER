@@ -29,7 +29,7 @@ return bufferString
 
 */
 
-import { calculateCRC } from './tool/CRC.js';
+import { calculateCRC } from '../tool/CRC.js';
 
 /**
  * 生成移动设置指令数据包

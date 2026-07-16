@@ -34,7 +34,7 @@ return bufferString
 
 */
 
-import { calculateCRC } from './tool/CRC.js';
+import { calculateCRC } from '../tool/CRC.js';
 
 /**
  * 生成回零设置指令数据包

@@ -1,8 +1,8 @@
-import { checkCRC } from '../GX28StepMotor/tool/checkCRC.js';
-import { VFBack } from '../GX28StepMotor/tool/VFBack.js';
+import { checkCRC } from '../tool/checkCRC.js';
+import { VFBack } from '../tool/VFBack.js';
 import { GX28 } from '../GX28StepMotor/main.js';
 import { createWebSocketAPI, emitResponse, getBusyState, bus } from '../websocket/API.js';
-import { dataBack } from '../GX28StepMotor/tool/dataBack.js';
+import { dataBack } from '../tool/dataBack.js';
 
 import { setting } from '../Setting.js';
 

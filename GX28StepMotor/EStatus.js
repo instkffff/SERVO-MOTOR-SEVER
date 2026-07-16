@@ -37,7 +37,7 @@ return bufferString
 
 */
 
-import { calculateCRC } from './tool/CRC.js';
+import { calculateCRC } from '../tool/CRC.js';
 
 /**
  * 生成读取电机状态指令数据包

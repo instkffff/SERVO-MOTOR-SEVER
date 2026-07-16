@@ -6,9 +6,9 @@ import { Zero } from '../Zero.js'
 import { ZeroSetting } from '../ZeroSetting.js'
 import { ZeroStatus } from '../ZeroStatus.js'
 
-import { dataBack } from '../tool/dataBack.js'
+import { dataBack } from '../../tool/dataBack.js'
 
-import { VFBack } from '../tool/VFBack.js'
+import { VFBack } from '../../tool/VFBack.js'
 
 
 function compareData(dataBuffer, dataString) {
