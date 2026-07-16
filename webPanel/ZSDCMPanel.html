@@ -65,14 +65,14 @@
     <div>
         <h3>6. 查询旋转状态 (SpinStatus)</h3>
         <button id="spinStatusBtn">查询</button>
-        <span id="spinStatusResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
+        <span id="spinStatusResult"></span>
     </div>
     <hr>
 
     <div>
         <h3>7. 查询零点开关 (ZeroSwitch)</h3>
         <button id="zeroSwitchBtn">查询</button>
-        <span id="zeroSwitchResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
+        <span id="zeroSwitchResult"></span>
     </div>
     <hr>
 
@@ -102,22 +102,6 @@
             ws.send(msg);
         }
 
-        function getHexString(data) {
-            if (Array.isArray(data) && data.length > 0) return data[0];
-            if (typeof data === 'string') return data;
-            return null;
-        }
-
-        function parseStatusByte(hexStr) {
-            if (!hexStr) return null;
-            let clean = hexStr.replace(/^0x/, '').replace(/\s/g, '');
-            if (clean.length < 10) return null;
-            return parseInt(clean.substring(8, 10), 16);
-        }
-
-        const spinStatusMap = { 0: '停止', 1: '正转', 2: '反转' };
-        const zeroSwitchMap = { 0: '未触发', 1: '已触发' };
-
         // ---- 连接 ----
         $('connectBtn').onclick = () => {
             const url = $('wsUrl').value.trim();
@@ -139,40 +123,7 @@
             ws.onerror = () => { log('连接错误'); };
             ws.onmessage = (e) => {
                 log('← ' + e.data);
-                try {
-                    const resp = JSON.parse(e.data);
-                    if (resp.status === 'busy') {
-                        log('系统繁忙');
-                        return;
-                    }
-                    
-                    const hexStr = getHexString(resp.data);
-                    if (!hexStr) return;
-
-                    const cmd = pendingCmd ? pendingCmd.toLowerCase() : '';
-                    
-                    // Spin 命令不解析数据
-                    if (cmd === 'spin') {
-                        pendingCmd = null;
-                        return;
-                    }
-
-                    if (resp.status === 'success' && hexStr) {
-                        const val = parseStatusByte(hexStr);
-                        if (val !== null) {
-                            if (cmd === 'spinstatus' || cmd === 'spin_status') {
-                                $('spinStatusResult').textContent = spinStatusMap[val] || ('未知(0x' + val.toString(16) + ')');
-                                $('spinStatusResult').style.color = '#0066cc';
-                            } else if (cmd === 'zeroswitch' || cmd === 'zero_switch') {
-                                $('zeroSwitchResult').textContent = zeroSwitchMap[val] || ('未知(0x' + val.toString(16) + ')');
-                                $('zeroSwitchResult').style.color = '#0066cc';
-                            }
-                        }
-                        pendingCmd = null;
-                    }
-                } catch (e) {
-                    // 忽略解析错误
-                }
+                pendingCmd = null;
             };
         };
 
@@ -216,15 +167,11 @@
 
         // ---- 6. SpinStatus ----
         $('spinStatusBtn').onclick = () => {
-            $('spinStatusResult').textContent = '查询中...';
-            $('spinStatusResult').style.color = '#ff9900';
             sendCmd('SpinStatus', []);
         };
 
         // ---- 7. ZeroSwitch ----
         $('zeroSwitchBtn').onclick = () => {
-            $('zeroSwitchResult').textContent = '查询中...';
-            $('zeroSwitchResult').style.color = '#ff9900';
             sendCmd('ZeroSwitch', []);
         };
     </script>
