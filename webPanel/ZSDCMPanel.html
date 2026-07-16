@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>伺服电机控制面板 (ZSDCM API)</title>
+</head>
+<body>
+    <h2>伺服电机控制面板 (ZSDCM API)</h2>
+
+    <div>
+        <h3>连接</h3>
+        <input type="text" id="wsUrl" value="ws://localhost:2345" size="30">
+        <button id="connectBtn">连接</button>
+        <button id="disconnectBtn" disabled>断开</button>
+        <span id="connStatus">未连接</span>
+    </div>
+    <hr>
+
+    <div>
+        <h3>从机ID</h3>
+        <input type="text" id="slaveId" value="0x0a" size="10">
+    </div>
+    <hr>
+
+    <div>
+        <h3>1. 设置加速度频率 (SetAccPulsHz)</h3>
+        <label>加速度频率 (Hz): <input type="number" id="accPulsHz" value="100" min="0"></label>
+        <button id="setAccPulsHzBtn">设置</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>2. 设置停止频率 (SetStopHz)</h3>
+        <label>停止频率 (Hz): <input type="number" id="stopHz" value="100" min="0"></label>
+        <button id="setStopHzBtn">设置</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>3. 设置脉冲频率 (SetPulsHz)</h3>
+        <label>脉冲频率 (Hz): <input type="number" id="pulsHz" value="50" min="0"></label>
+        <button id="setPulsHzBtn">设置</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>4. 设置脉冲数量 (SetPuls)</h3>
+        <label>脉冲数量: <input type="number" id="pulsCount" value="10000" min="0"></label>
+        <button id="setPulsBtn">设置</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>5. 旋转控制 (Spin)</h3>
+        <label>旋转方向:</label>
+        <select id="spinDir">
+            <option value="0">停止</option>
+            <option value="1" selected>正转</option>
+            <option value="2">反转</option>
+        </select>
+        <button id="spinBtn">执行</button>
+    </div>
+    <hr>
+
+    <div>
+        <h3>6. 查询旋转状态 (SpinStatus)</h3>
+        <button id="spinStatusBtn">查询</button>
+        <span id="spinStatusResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
+    </div>
+    <hr>
+
+    <div>
+        <h3>7. 查询零点开关 (ZeroSwitch)</h3>
+        <button id="zeroSwitchBtn">查询</button>
+        <span id="zeroSwitchResult" style="margin-left: 10px; font-weight: bold; color: #0066cc;"></span>
+    </div>
+    <hr>
+
+    <div>
+        <h3>日志</h3>
+        <textarea id="log" rows="20" cols="80" readonly></textarea>
+    </div>
+
+    <script>
+        let ws = null;
+        let pendingCmd = null;
+
+        const $ = id => document.getElementById(id);
+        const log = (msg) => {
+            const ta = $('log');
+            ta.value += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+            ta.scrollTop = ta.scrollHeight;
+        };
+
+        function sendCmd(cmd, data) {
+            const id = $('slaveId').value.trim();
+            if (!id) { log('请填写从机ID'); return; }
+            if (!ws || ws.readyState !== WebSocket.OPEN) { log('未连接到服务器'); return; }
+            const msg = JSON.stringify({ cmd, id, data });
+            log('→ ' + msg);
+            pendingCmd = cmd;
+            ws.send(msg);
+        }
+
+        function getHexString(data) {
+            if (Array.isArray(data) && data.length > 0) return data[0];
+            if (typeof data === 'string') return data;
+            return null;
+        }
+
+        function parseStatusByte(hexStr) {
+            if (!hexStr) return null;
+            let clean = hexStr.replace(/^0x/, '').replace(/\s/g, '');
+            if (clean.length < 10) return null;
+            return parseInt(clean.substring(8, 10), 16);
+        }
+
+        const spinStatusMap = { 0: '停止', 1: '正转', 2: '反转' };
+        const zeroSwitchMap = { 0: '未触发', 1: '已触发' };
+
+        // ---- 连接 ----
+        $('connectBtn').onclick = () => {
+            const url = $('wsUrl').value.trim();
+            ws = new WebSocket(url);
+            ws.onopen = () => {
+                $('connStatus').textContent = '已连接';
+                $('connectBtn').disabled = true;
+                $('disconnectBtn').disabled = false;
+                log('已连接到 ' + url);
+            };
+            ws.onclose = () => {
+                $('connStatus').textContent = '已断开';
+                $('connectBtn').disabled = false;
+                $('disconnectBtn').disabled = true;
+                log('连接已关闭');
+                ws = null;
+                pendingCmd = null;
+            };
+            ws.onerror = () => { log('连接错误'); };
+            ws.onmessage = (e) => {
+                log('← ' + e.data);
+                try {
+                    const resp = JSON.parse(e.data);
+                    if (resp.status === 'busy') {
+                        log('系统繁忙');
+                        return;
+                    }
+                    
+                    const hexStr = getHexString(resp.data);
+                    if (!hexStr) return;
+
+                    const cmd = pendingCmd ? pendingCmd.toLowerCase() : '';
+                    
+                    // Spin 命令不解析数据
+                    if (cmd === 'spin') {
+                        pendingCmd = null;
+                        return;
+                    }
+
+                    if (resp.status === 'success' && hexStr) {
+                        const val = parseStatusByte(hexStr);
+                        if (val !== null) {
+                            if (cmd === 'spinstatus' || cmd === 'spin_status') {
+                                $('spinStatusResult').textContent = spinStatusMap[val] || ('未知(0x' + val.toString(16) + ')');
+                                $('spinStatusResult').style.color = '#0066cc';
+                            } else if (cmd === 'zeroswitch' || cmd === 'zero_switch') {
+                                $('zeroSwitchResult').textContent = zeroSwitchMap[val] || ('未知(0x' + val.toString(16) + ')');
+                                $('zeroSwitchResult').style.color = '#0066cc';
+                            }
+                        }
+                        pendingCmd = null;
+                    }
+                } catch (e) {
+                    // 忽略解析错误
+                }
+            };
+        };
+
+        $('disconnectBtn').onclick = () => {
+            if (ws) ws.close();
+        };
+
+        // ---- 1. SetAccPulsHz ----
+        $('setAccPulsHzBtn').onclick = () => {
+            const val = parseInt($('accPulsHz').value);
+            if (isNaN(val)) { log('请输入有效的加速度频率'); return; }
+            sendCmd('SetAccPulsHz', [val]);
+        };
+
+        // ---- 2. SetStopHz ----
+        $('setStopHzBtn').onclick = () => {
+            const val = parseInt($('stopHz').value);
+            if (isNaN(val)) { log('请输入有效的停止频率'); return; }
+            sendCmd('SetStopHz', [val]);
+        };
+
+        // ---- 3. SetPulsHz ----
+        $('setPulsHzBtn').onclick = () => {
+            const val = parseInt($('pulsHz').value);
+            if (isNaN(val)) { log('请输入有效的脉冲频率'); return; }
+            sendCmd('SetPulsHz', [val]);
+        };
+
+        // ---- 4. SetPuls ----
+        $('setPulsBtn').onclick = () => {
+            const val = parseInt($('pulsCount').value);
+            if (isNaN(val)) { log('请输入有效的脉冲数量'); return; }
+            sendCmd('SetPuls', [val]);
+        };
+
+        // ---- 5. Spin ----
+        $('spinBtn').onclick = () => {
+            const dir = parseInt($('spinDir').value);
+            sendCmd('Spin', [dir]);
+        };
+
+        // ---- 6. SpinStatus ----
+        $('spinStatusBtn').onclick = () => {
+            $('spinStatusResult').textContent = '查询中...';
+            $('spinStatusResult').style.color = '#ff9900';
+            sendCmd('SpinStatus', []);
+        };
+
+        // ---- 7. ZeroSwitch ----
+        $('zeroSwitchBtn').onclick = () => {
+            $('zeroSwitchResult').textContent = '查询中...';
+            $('zeroSwitchResult').style.color = '#ff9900';
+            sendCmd('ZeroSwitch', []);
+        };
+    </script>
+</body>
+</html>
