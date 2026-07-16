@@ -35,8 +35,8 @@ function VFBack(buffer, ComBack) {
     }
 
     // 2. 如果 ComBack 是数字，直接对比 buffer 的字节长度
-    if (typeof ComBack.Length === 'number') {
-        return buffer.length === ComBack.Length;
+    if (typeof ComBack["Length"] === 'number') {
+        return buffer.length === ComBack["Length"];
     }
 
     // 3. 如果 ComBack 是字符串，执行原有的相等判断
