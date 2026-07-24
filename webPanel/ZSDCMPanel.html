@@ -77,6 +77,14 @@
     <hr>
 
     <div>
+        <h3>8. 伺服使能控制 (enOn / enOff)</h3>
+        <button id="enOnBtn">开启使能 (enOn)</button>
+        <button id="enOffBtn">关闭使能 (enOff)</button>
+        <span id="enOnResult"></span>
+    </div>
+    <hr>
+
+    <div>
         <h3>日志</h3>
         <textarea id="log" rows="20" cols="80" readonly></textarea>
     </div>
@@ -169,6 +177,22 @@
         // ---- 7. ZeroSwitch ----
         $('zeroSwitchBtn').onclick = () => {
             sendCmd('ZeroSwitch', []);
+        };
+
+        // ---- 8. EnOn / EnOff (固定从机地址 0x01) ----
+        function sendCmdFixedId(cmd, data, slaveId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) { log('未连接到服务器'); return; }
+            const msg = JSON.stringify({ cmd, id: slaveId, data });
+            log('→ ' + msg);
+            ws.send(msg);
+        }
+
+        $('enOnBtn').onclick = () => {
+            sendCmdFixedId('enOn', [], '0x01');
+        };
+
+        $('enOffBtn').onclick = () => {
+            sendCmdFixedId('enOff', [], '0x01');
         };
     </script>
 </body>

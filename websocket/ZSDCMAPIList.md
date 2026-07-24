@@ -109,3 +109,10 @@ data: [旋转方向]
 
 cmd: "SetPulsHz"
 data: [脉冲频率]
+
+## 8. enOn / enOff
+
+用于开启 / 关闭伺服电机。
+
+cmd: "enOn"
+data: []
