@@ -7,4 +7,13 @@ const setting = {
     STOP: 1,
 }
 
-export { setting }
+const side = {
+    COM: 'COM10',
+    BAUDRATE: 9600,
+    TIMEOUT: 1000,
+    DATA: 8,
+    PARITY: 'none',
+    STOP: 1,
+}
+
+export { setting, side }
