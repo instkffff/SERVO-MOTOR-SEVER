@@ -1,5 +1,5 @@
 const setting = {
-    COM: 'COM3',
+    COM: 'COM1',
     BAUDRATE: 115200,
     TIMEOUT: 1000,
     DATA: 8,
