@@ -105,8 +105,15 @@ function onSideReceiveData(callback) {
     sidePort.on('data', (data) => {
         sideReceiveBuffer = Buffer.concat([sideReceiveBuffer, data])
         console.log('[侧边串口] 收到数据, 长度:', data.length)
-        if (typeof callback === 'function') {
-            callback(data)
+        
+        // 检查是否收够8个字节
+        if (sideReceiveBuffer.length >= 8 && typeof callback === 'function') {
+            // 取出前8个字节
+            const packet = sideReceiveBuffer.subarray(0, 8)
+            // 移除已取出的8个字节
+            sideReceiveBuffer = sideReceiveBuffer.subarray(8)
+            // 回调返回8字节数据包
+            callback(packet)
         }
     })
 }
