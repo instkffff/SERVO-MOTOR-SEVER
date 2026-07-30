@@ -37,7 +37,7 @@ function openSideSerialPort(path, options = {}) {
 
         sidePort.on('data', (data) => {
             sideReceiveBuffer = Buffer.concat([sideReceiveBuffer, data])
-            console.log('[侧边串口] 收到数据, 长度:', data.length)
+            // console.log('[侧边串口] 收到数据, 长度:', data.length)
         })
 
         sidePort.on('error', (err) => {
