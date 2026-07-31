@@ -62,5 +62,3 @@ ws 发送 offload 指令
 如果是socket到ws失败
 
 返回 sendError buffer 到 socket client
-
-## 接收到的socket数据使用 crc8VF(buffer) 校验 成功返回 true 失败返回 false
