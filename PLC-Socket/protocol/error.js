@@ -1,0 +1,3 @@
+const sendError = Buffer.from([0xaa, 0x03, 0xee, 0x74]);
+
+export { sendError }
