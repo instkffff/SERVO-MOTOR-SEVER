@@ -15,6 +15,97 @@ let currentWs = null;
 let currentSocket = null;
 
 /**
+ * 处理来自 Socket 的数据缓冲
+ * @param {Buffer} buffer - 接收到的原始数据
+ * @param {net.Socket} socket - 当前 Socket 连接
+ */
+function handleSocketData(buffer, socket) {
+    if (!crc8VF(buffer)) {
+        console.error('CRC8 Check Failed');
+        socket.write(sendError);
+        return;
+    }
+
+    if (!currentWs) {
+        socket.write(sendError);
+        return;
+    }
+
+    const result = parseSocketBuffer(buffer);
+    if (result) {
+        currentWs.send(JSON.stringify({ cmd: result.cmd, data: result.data }));
+        socket.write(sendSuccess);
+    } else {
+        console.warn('Received unknown socket buffer');
+        socket.write(sendError);
+    }
+}
+
+/**
+ * 解析 Socket 缓冲，返回匹配的命令对象
+ * @param {Buffer} buffer
+ * @returns {{ cmd: string, data: any[] } | null}
+ */
+function parseSocketBuffer(buffer) {
+    const cases = [
+        { pattern: loadSuccess, cmd: 'LoadSuccess', data: [] },
+        { pattern: offloadSuccess, cmd: 'OffloadSuccess', data: [] },
+        { pattern: AutoStart, cmd: 'AutoStart', data: [] },
+        { pattern: StepStart, cmd: 'StepStart', data: [] },
+        { pattern: Stop, cmd: 'Stop', data: [] },
+        { pattern: EStop, cmd: 'EStop', data: [] },
+        { pattern: loadNone, cmd: 'LoadNone', data: [] },
+    ];
+
+    for (const { pattern, cmd, data } of cases) {
+        if (buffer.includes(pattern)) {
+            return { cmd, data };
+        }
+    }
+
+    return null;
+}
+
+/**
+ * 处理来自 WebSocket 的消息
+ * @param {Object} payload - 解析后的 JSON 消息
+ * @param {WebSocket} ws - 当前 WebSocket 连接
+ */
+function handleWsMessage(payload, ws) {
+    const { cmd, data } = payload;
+
+    if (!currentSocket) {
+        ws.send(JSON.stringify({ cmd: 'EE', data: [] }));
+        return;
+    }
+
+    const result = routeWsCommand(cmd, data);
+    if (result) {
+        currentSocket.write(result);
+    } else {
+        console.warn(`Unknown WS command: ${cmd}`);
+        ws.send(JSON.stringify({ cmd: 'EE', data: [] }));
+    }
+}
+
+/**
+ * 根据 WS 命令路由到对应的 Socket 写入操作
+ * @param {string} cmd
+ * @param {any[]} data
+ * @returns {Buffer | undefined}
+ */
+function routeWsCommand(cmd, data) {
+    switch (cmd) {
+        case 'Load':
+            return load;
+        case 'Offload':
+            return offload(data[0], data[1], data[2], data[3]);
+        default:
+            return undefined;
+    }
+}
+
+/**
  * 初始化并启动桥接服务器
  * @returns {Object} 返回服务器实例，方便后续关闭或管理
  */
@@ -31,25 +122,7 @@ function initBridge() {
         ws.on('message', (message) => {
             try {
                 const payload = JSON.parse(message);
-                const { cmd, data } = payload;
-
-                if (!currentSocket) {
-                    ws.send(JSON.stringify({ cmd: 'EE', data: [] }));
-                    return;
-                }
-
-                switch (cmd) {
-                    case 'Load':
-                        // aa 01 00 da
-                        currentSocket.write(load);
-                        break;
-                    case 'Offload':
-                        currentSocket.write(offload(data[0], data[1], data[2], data[3]));
-                        break;
-                    default:
-                        console.warn(`Unknown WS command: ${cmd}`);
-                        ws.send(JSON.stringify({ cmd: 'EE', data: [] }));
-                }
+                handleWsMessage(payload, ws);
             } catch (e) {
                 console.error('WS Message Error:', e);
                 ws.send(JSON.stringify({ cmd: 'EE', data: [] }));
@@ -68,56 +141,7 @@ function initBridge() {
         currentSocket = socket;
 
         socket.on('data', (buffer) => {
-            if (!crc8VF(buffer)) {
-                console.error('CRC8 Check Failed');
-                socket.write(sendError);
-                return;
-            }
-
-            if (!currentWs) {
-                socket.write(sendError);
-                return;
-            }
-
-            try {
-                // 实际解析逻辑应在 protocol 文件夹中实现
-                switch (true) {
-                    case buffer.includes(loadSuccess):
-                        currentWs.send(JSON.stringify({ cmd: 'LoadSuccess', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    case buffer.includes(offloadSuccess):
-                        currentWs.send(JSON.stringify({ cmd: 'OffloadSuccess', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    case buffer.includes(AutoStart):
-                        currentWs.send(JSON.stringify({ cmd: 'AutoStart', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    case buffer.includes(StepStart):
-                        currentWs.send(JSON.stringify({ cmd: 'StepStart', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    case buffer.includes(Stop):
-                        currentWs.send(JSON.stringify({ cmd: 'Stop', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    case buffer.includes(EStop):
-                        currentWs.send(JSON.stringify({ cmd: 'EStop', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    case buffer.includes(loadNone):
-                        currentWs.send(JSON.stringify({ cmd: 'LoadNone', data: [] }));
-                        socket.write(sendSuccess);
-                        break;
-                    default:
-                        console.warn('Received unknown socket buffer');
-                        socket.write(sendError);
-                }
-            } catch (e) {
-                console.error('Socket Data Processing Error:', e);
-                socket.write(sendError);
-            }
+            handleSocketData(buffer, socket);
         });
 
         socket.on('close', () => {
@@ -137,7 +161,6 @@ function initBridge() {
 
     return { wss, server };
 }
-
 
 export { initBridge };
 
