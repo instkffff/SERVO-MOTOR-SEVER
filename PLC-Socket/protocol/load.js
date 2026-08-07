@@ -2,4 +2,6 @@ const load = Buffer.from([0xaa, 0x01, 0x00, 0xda]);
 
 const loadSuccess = Buffer.from([0xaa, 0x01, 0x01, 0xdd]);
 
-export { load, loadSuccess }
+const loadNone = Buffer.from([0xaa, 0x01, 0x02, 0xd4]);
+
+export { load, loadSuccess, loadNone }

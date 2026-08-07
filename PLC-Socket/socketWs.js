@@ -1,9 +1,11 @@
 import { WebSocketServer } from 'ws';
 import net from 'net';
 import { offload, offloadSuccess } from './protocol/offload.js';
-import { load, loadSuccess } from './protocol/load.js';
+import { load, loadSuccess, loadNone } from './protocol/load.js';
 import { sendError } from './protocol/error.js';
 import { crc8VF } from './tools/crc8VF.js';
+import { AutoStart, StepStart, Stop, EStop } from './protocol/workflow.js';
+import { sendSuccess } from './protocol/success.js';
 
 const WS_PORT = 1200;
 const SOCKET_PORT = 1100;
@@ -79,12 +81,38 @@ function initBridge() {
 
             try {
                 // 实际解析逻辑应在 protocol 文件夹中实现
-                if (buffer.includes(loadSuccess)) {
-                    currentWs.send(JSON.stringify({ cmd: 'LoadSuccess', data: [] }));
-                } else if (buffer.includes(offloadSuccess)) {
-                    currentWs.send(JSON.stringify({ cmd: 'OffloadSuccess', data: [] }));
-                } else {
-                    console.warn('Received unknown socket buffer');
+                switch (true) {
+                    case buffer.includes(loadSuccess):
+                        currentWs.send(JSON.stringify({ cmd: 'LoadSuccess', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    case buffer.includes(offloadSuccess):
+                        currentWs.send(JSON.stringify({ cmd: 'OffloadSuccess', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    case buffer.includes(AutoStart):
+                        currentWs.send(JSON.stringify({ cmd: 'AutoStart', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    case buffer.includes(StepStart):
+                        currentWs.send(JSON.stringify({ cmd: 'StepStart', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    case buffer.includes(Stop):
+                        currentWs.send(JSON.stringify({ cmd: 'Stop', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    case buffer.includes(EStop):
+                        currentWs.send(JSON.stringify({ cmd: 'EStop', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    case buffer.includes(loadNone):
+                        currentWs.send(JSON.stringify({ cmd: 'LoadNone', data: [] }));
+                        socket.write(sendSuccess);
+                        break;
+                    default:
+                        console.warn('Received unknown socket buffer');
+                        socket.write(sendError);
                 }
             } catch (e) {
                 console.error('Socket Data Processing Error:', e);
