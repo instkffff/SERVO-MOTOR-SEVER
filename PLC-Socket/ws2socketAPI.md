@@ -119,3 +119,23 @@ ws 发送 offload 指令
 - 如果socket到ws成功
 
 返回 sendSuccess buffer 到 socket client
+
+## 执行/拒绝指令
+
+- 如果执行指令则发送
+
+```json
+{
+    "cmd": "Accept",
+    "data": []
+}
+```
+
+- 如果拒绝指令则发送
+
+```json
+{
+    "cmd": "Reject",
+    "data": []
+}
+```

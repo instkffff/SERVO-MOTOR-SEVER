@@ -4,7 +4,7 @@ const setting = {
     TIMEOUT: 1000,
     DATA: 8,
     PARITY: 'none',
-    STOP: 1,
+    STOP: 1
 }
 
 const side = {
@@ -13,7 +13,19 @@ const side = {
     TIMEOUT: 1000,
     DATA: 8,
     PARITY: 'none',
-    STOP: 1,
+    STOP: 1
 }
 
-export { setting, side }
+/* const PLC = {
+    type: 'server',
+    host: '192.168.0.21',
+    port: 2090
+} */
+
+const PLC = {
+    type: 'server',
+    host: 'localhost',
+    port: 2090
+}
+
+export { setting, side, PLC }
