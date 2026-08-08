@@ -100,6 +100,8 @@ function routeWsCommand(cmd, data) {
             return load;
         case 'Offload':
             return offload(data[0], data[1], data[2], data[3]);
+        case 'EE':
+            return sendError;
         default:
             return undefined;
     }
