@@ -23,4 +23,6 @@ if ( PLC.type === 'server' ){
     initClientBridge();
 } else if ( PLC.type === 'client'){
     initBridge();
+} else {
+    console.error('PLC type not error');
 }
