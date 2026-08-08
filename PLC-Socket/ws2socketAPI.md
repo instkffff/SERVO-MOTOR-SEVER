@@ -101,25 +101,6 @@ ws 发送 offload 指令
 }
 ```
 
-## 转发反馈
-
-- 如果是ws到socket失败
-
-```json
-{
-    "cmd": "EE",
-    "data": []
-}
-```
-
-- 如果socket到ws失败
-
-返回 sendError buffer 到 socket client
-
-- 如果socket到ws成功
-
-返回 sendSuccess buffer 到 socket client
-
 ## 执行/拒绝指令
 
 - 如果执行指令则发送
@@ -139,3 +120,23 @@ ws 发送 offload 指令
     "data": []
 }
 ```
+
+## 转发反馈
+
+- 如果是ws到socket失败
+
+```json
+{
+    "cmd": "EE",
+    "data": []
+}
+```
+
+- 如果socket到ws失败
+
+返回 sendError buffer 到 socket client
+
+- 如果socket到ws成功
+
+返回 sendSuccess buffer 到 socket client
+
