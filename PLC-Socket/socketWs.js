@@ -6,9 +6,11 @@ import { sendError } from './protocol/error.js';
 import { crc8VF } from './tools/crc8VF.js';
 import { AutoStart, StepStart, Stop, EStop } from './protocol/workflow.js';
 import { sendSuccess } from './protocol/success.js';
+import { PLC } from '../Setting.js';
+import { accept, reject } from './protocol/AorR.js';
 
 const WS_PORT = 1200;
-const SOCKET_PORT = 1100;
+const SOCKET_PORT = PLC.port;
 
 // 存储当前的连接
 let currentWs = null;
@@ -100,8 +102,10 @@ function routeWsCommand(cmd, data) {
             return load;
         case 'Offload':
             return offload(data[0], data[1], data[2], data[3]);
-        case 'EE':
-            return sendError;
+        case 'Accept':
+            return accept;
+        case 'Reject':
+            return reject;
         default:
             return undefined;
     }
